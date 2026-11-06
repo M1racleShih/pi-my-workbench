@@ -1,0 +1,6 @@
+node_modules/
+.workbench/
+*.tgz
+.env
+.env.*
+*.local.json

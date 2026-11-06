@@ -1,0 +1,29 @@
+{
+  "pi-provider-model-picker": {
+    "repository": "https://github.com/M1racleShih/pi-provider-model-picker",
+    "version": "0.1.0",
+    "commit": "94e218dd6a14cf43fab0e4fde0e9c9908412cb16",
+    "entry": "extensions/index.ts",
+    "alias": "picker"
+  },
+  "pi-session-titler": {
+    "repository": "https://github.com/M1racleShih/pi-session-titler",
+    "version": "0.1.0",
+    "entry": "extensions/auto-session-name.ts",
+    "alias": "titler"
+  },
+  "pi-hud": {
+    "repository": "https://github.com/M1racleShih/pi-hud",
+    "version": "0.2.1",
+    "commit": "4f48d4e0d6e97e17679bc6c20222c3dfa751fe2a",
+    "entry": "index.ts",
+    "alias": "hud"
+  },
+  "pi-block-editor": {
+    "repository": "https://github.com/M1racleShih/pi-block-editor",
+    "version": "0.1.0",
+    "commit": "bb42e1ff1f55db0c1bf080fe5631a16ca10648c5",
+    "entry": "index.ts",
+    "alias": "editor"
+  }
+}
