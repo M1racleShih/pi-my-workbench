@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0 - 2026-11-06
+
+- Add pi-gpt-subagent-policy as a fifth pinned upstream and seventh independent module; preserve its current-model GPT allowlist, live agent-dir configuration and fail-closed cleanup behavior.
+- Keep one collapsed workbench summary with seven native detail paths and an independent policy resource switch.
+- Add a policy development alias and conditional prompting/configuration tests without model requests.
+- Require Node.js 24+ to honor the new upstream's engine declaration; CI now targets Node 24, not Node 22.
+
 ## 0.1.1 - 2026-11-06
 
 - Show the workbench once in the collapsed startup summary, while Ctrl+O retains all six native resource paths and diagnostics.

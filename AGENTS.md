@@ -1,6 +1,6 @@
 # pi-my-workbench
 
-This is a thin Pi package, not a fork or source mirror of its four upstream extensions.
+This is a thin Pi package, not a fork or source mirror of its five upstream extensions.
 
 - Keep upstream implementations in their original repositories. Pin Git dependencies to full commits and npm dependencies to exact versions; update package-lock.json and upstreams.json together.
 - Declare separate resource entry points. Do not collapse modules into one factory or bundle host-provided Pi APIs.

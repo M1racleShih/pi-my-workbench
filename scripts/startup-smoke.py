@@ -49,6 +49,7 @@ expected = [
     'node_modules/pi-provider-model-picker/extensions',
     'node_modules/pi-session-titler/extensions/auto-session-name.ts',
     'node_modules/pi-hud',
+    'node_modules/pi-gpt-subagent-policy/src',
     'extensions/block-editor.ts',
     'extensions/clear.ts',
     'extensions/model-overrides.ts',
@@ -79,7 +80,7 @@ with tempfile.TemporaryDirectory(prefix='pi-workbench-startup-') as temp:
     try:
         tmux('new-session', '-d', '-s', 'qa', '-x', '120', '-y', '65', '-c', str(cwd), shlex.join(launch))
         first = wait_for(lambda text: collapsed(text) and 'ready' in text, '01-collapsed')
-        for entry in ('clear.ts', 'model-overrides.ts', 'pi-provider-model-picker', 'pi-block-editor', 'auto-session-name.ts'):
+        for entry in ('clear.ts', 'model-overrides.ts', 'pi-provider-model-picker', 'pi-block-editor', 'auto-session-name.ts', 'pi-gpt-subagent-policy'):
             assert entry not in first, first
         tmux('send-keys', '-t', 'qa', 'C-o')
         wait_for(lambda text: '[Extensions]' in text and all(path in text for path in expected), '02-expanded')

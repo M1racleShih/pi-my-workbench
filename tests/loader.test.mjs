@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { DefaultResourceLoader, SettingsManager } from "@earendil-works/pi-coding-agent";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+const entryCount = manifest.pi.extensions.length;
 
 async function load(t, options = {}) {
   const temp = mkdtempSync(join(tmpdir(), "pi-workbench-loader-test-"));
@@ -38,12 +39,12 @@ function assertClean(result) {
 }
 const commands = (result) => result.extensions.flatMap((extension) => [...extension.commands.keys()]);
 
-test("native Pi discovers six independent entries without registering personal models", async (t) => {
+test("native Pi discovers every declared entry without registering personal models", async (t) => {
   const { result } = await load(t);
   assertClean(result);
-  assert.equal(result.extensions.length, 6);
+  assert.equal(result.extensions.length, entryCount);
   assert.deepEqual(commands(result).sort(), ["block-editor", "clear", "hud", "pm"]);
-  assert.equal(new Set(result.extensions.map((e) => e.resolvedPath)).size, 6);
+  assert.equal(new Set(result.extensions.map((e) => e.resolvedPath)).size, entryCount);
   assert.equal(result.runtime.pendingProviderRegistrations.length, 0);
   assert.equal(result.extensions.flatMap((e) => [...e.flags.keys()]).length, 3);
   for (const extension of result.extensions) assert.equal(extension.tools.size, 0);
@@ -52,7 +53,7 @@ test("native Pi discovers six independent entries without registering personal m
 test("native package filtering can disable a single upstream module", async (t) => {
   const { result } = await load(t, { packages: [{ source: root, extensions: ["!node_modules/pi-hud/**"] }] });
   assertClean(result);
-  assert.equal(result.extensions.length, 5);
+  assert.equal(result.extensions.length, entryCount - 1);
   assert.ok(!commands(result).includes("hud"));
   assert.ok(commands(result).includes("block-editor"));
 });
@@ -60,7 +61,7 @@ test("native package filtering can disable a single upstream module", async (t) 
 test("the editor adapter remains an independently filterable resource", async (t) => {
   const { result } = await load(t, { packages: [{ source: root, extensions: ["!extensions/block-editor.ts"] }] });
   assertClean(result);
-  assert.equal(result.extensions.length, 5);
+  assert.equal(result.extensions.length, entryCount - 1);
   assert.ok(!commands(result).includes("block-editor"));
   assert.ok(commands(result).includes("hud"));
   assert.ok(commands(result).includes("clear"));
@@ -73,9 +74,91 @@ test("reload does not multiply commands or hooks", async (t) => {
   await loader.reload();
   const after = loader.getExtensions();
   assertClean(after);
-  assert.equal(after.extensions.length, 6);
+  assert.equal(after.extensions.length, entryCount);
   assert.deepEqual(commands(after).sort(), commands(result).sort());
   assert.deepEqual(after.extensions.map((e) => [e.path, [...e.handlers].map(([name, handlers]) => [name, handlers.length])]), before);
+});
+
+const policyModule = (result) => result.extensions.find((extension) => extension.path.endsWith("/pi-gpt-subagent-policy/src/index.ts"));
+const policySection = "gpt_subagent_policy";
+
+test("GPT policy is one independently filterable module with no tools, commands or flags", async (t) => {
+  const only = await load(t, { packages: [{ source: root, extensions: ["node_modules/pi-gpt-subagent-policy/src/index.ts"] }] });
+  assertClean(only.result);
+  assert.equal(only.result.extensions.length, 1);
+  const policy = policyModule(only.result);
+  assert.equal(policy.handlers.get("before_agent_start").length, 1);
+  assert.equal(policy.tools.size + policy.commands.size + policy.flags.size, 0);
+});
+
+test("GPT policy can be excluded while the other modules remain loaded", async (t) => {
+  const excluded = await load(t, { packages: [{ source: root, extensions: ["!node_modules/pi-gpt-subagent-policy/**"] }] });
+  assertClean(excluded.result);
+  assert.equal(excluded.result.extensions.length, entryCount - 1);
+  assert.equal(policyModule(excluded.result), undefined);
+});
+
+test("bundled policy keeps GPT -> non-GPT -> Terra conditional prompting and unrelated sections", async (t) => {
+  const { result } = await load(t);
+  assertClean(result);
+  const policy = policyModule(result);
+  assert.equal(result.extensions.filter((extension) => extension === policy).length, 1);
+  const handler = policy.handlers.get("before_agent_start")[0];
+  const options = { sections: { unrelated: "keep this" }, customPrompt: "unchanged custom prompt" };
+  const event = { systemPromptOptions: options };
+  const invoke = (model) => handler(event, { model, mode: "print", hasUI: false,
+    get modelRegistry() { throw new Error("Policy must not access a model backend"); } });
+  await invoke({ provider: "openai", id: "gpt-6.1-sol" });
+  const expected = readFileSync(join(root, "node_modules/pi-gpt-subagent-policy/gpt-subagent-policy.md"), "utf8").trim();
+  assert.equal(options.sections[policySection], expected);
+  await invoke({ provider: "openai", id: "gpt-6.1-sol" });
+  assert.deepEqual(Object.keys(options.sections).sort(), [policySection, "unrelated"]);
+  await invoke({ provider: "openai", id: "glm-5.3", name: "GPT display name", api: "openai-completions" });
+  assert.deepEqual(options.sections, { unrelated: "keep this" });
+  await invoke({ provider: "gateway", id: "gpt-6.1-terra" });
+  assert.equal(options.sections[policySection], expected);
+  assert.equal(options.customPrompt, "unchanged custom prompt");
+});
+
+test("bundled policy honors live agent-dir switches, invalid-config fail-closed and exact patterns", async (t) => {
+  const { result, agentDir } = await load(t);
+  assertClean(result);
+  const handler = policyModule(result).handlers.get("before_agent_start")[0];
+  const path = join(agentDir, "pi-gpt-subagent-policy.json");
+  const options = { sections: { unrelated: "keep" } };
+  const event = { systemPromptOptions: options };
+  const warnings = [];
+  const ctx = { model: { provider: "gateway", id: "gpt-6.1-sol" }, mode: "rpc", hasUI: true,
+    ui: { notify: (message) => warnings.push(message) } };
+  await handler(event, ctx);
+  assert.ok(options.sections[policySection]);
+  writeFileSync(path, JSON.stringify({ enabled: false }));
+  await handler(event, ctx);
+  assert.deepEqual(options.sections, { unrelated: "keep" });
+  writeFileSync(path, "{");
+  await handler(event, ctx); await handler(event, ctx);
+  assert.equal(warnings.length, 1);
+  assert.deepEqual(options.sections, { unrelated: "keep" });
+  writeFileSync(path, JSON.stringify({ enabled: true, modelPatterns: ["openai/gpt-6.1-sol"] }));
+  await handler(event, ctx);
+  assert.equal(options.sections[policySection], undefined);
+  ctx.model = { provider: "openai", id: "gpt-6.1-sol" };
+  await handler(event, ctx);
+  assert.ok(options.sections[policySection]);
+});
+
+test("bundled policy cleans only its inherited tag from a forced non-GPT prompt", async (t) => {
+  const { result } = await load(t);
+  assertClean(result);
+  const handler = policyModule(result).handlers.get("before_agent_start")[0];
+  const options = { sections: { unrelated: "keep" }, forceSystemPrompt: "base\n<gpt_subagent_policy>\nstale\n</gpt_subagent_policy>\n<other>keep</other>" };
+  const event = { systemPromptOptions: options };
+  await handler(event, { model: { provider: "openai", id: "gpt-6.1-sol" }, mode: "print", hasUI: false });
+  assert.equal(options.forceSystemPrompt.match(/<gpt_subagent_policy>/g)?.length, 1);
+  await handler(event, { model: { provider: "openai", id: "glm-5.3" }, mode: "print", hasUI: false });
+  assert.ok(!options.forceSystemPrompt.includes("gpt_subagent_policy"));
+  assert.ok(options.forceSystemPrompt.includes("<other>keep</other>"));
+  assert.deepEqual(options.sections, { unrelated: "keep" });
 });
 
 test("model overrides queue exactly the opted-in definitions", async (t) => {
@@ -138,12 +221,12 @@ test("clear preserves model and thinking across a replacement factory", async (t
   assert.equal(notices.length, 1);
 });
 
-for (const source of ["local", "git"]) test(`workbench ${source} startup is one summary with six native detail paths`, async (t) => {
+for (const source of ["local", "git"]) test(`workbench ${source} startup is one summary with all native detail paths`, async (t) => {
   const { result, cwd } = await load(t);
   assertClean(result);
   const entries = manifest.pi.extensions.map((path) => path.replace(/^\.\//, ""));
   const labels = source === "git" ? entries.map((path) => `M1racleShih/pi-my-workbench:${path}`)
-    : ["extensions", "auto-session-name.ts", "pi-hud", "block-editor.ts", "clear.ts", "model-overrides.ts"];
+    : entries.map((path) => basename(path.replace(/\/index\.ts$/, "")));
   const paths = entries.map((path) => source === "git" ? path : `${root}/${path.replace(/\/index\.ts$/, "")}`);
   const expanded = source === "git" ? `[Extensions]\n  user\n    git:github.com/M1racleShih/pi-my-workbench@main\n${paths.map((path) => `      ${path}`).join("\n")}`
     : `[Extensions]\n  user\n${paths.map((path) => `    ${path}`).join("\n")}`;
@@ -177,7 +260,8 @@ for (const source of ["local", "git"]) test(`workbench ${source} startup is one 
 });
 
 test("manifest intentionally has no global default model changes or extra resource types", () => {
-  assert.equal(manifest.pi.extensions.length, 6);
+  assert.equal(manifest.pi.extensions.length, 7);
+  assert.equal(manifest.engines.node, ">=24");
   assert.deepEqual(manifest.pi.skills, []);
   assert.deepEqual(manifest.pi.prompts, []);
   assert.deepEqual(manifest.pi.themes, []);

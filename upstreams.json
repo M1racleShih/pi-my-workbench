@@ -26,5 +26,12 @@
     "entry": "index.ts",
     "resource": "extensions/block-editor.ts",
     "alias": "editor"
+  },
+  "pi-gpt-subagent-policy": {
+    "repository": "https://github.com/M1racleShih/pi-gpt-subagent-policy",
+    "version": "0.1.0",
+    "commit": "e2c9bdf99d209aa24812c5e60e4fea678d2d9355",
+    "entry": "src/index.ts",
+    "alias": "policy"
   }
 }

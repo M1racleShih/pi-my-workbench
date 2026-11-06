@@ -2,7 +2,7 @@
 
 一套统一安装、分模块维护的 [Pi](https://pi.dev/) 扩展组合。
 
-**聚合安装和经过验证的版本，不合并上游源码。** 四个扩展继续在各自仓库开发和发布；本仓库只维护依赖、独立入口、两个自有模块及组合测试。
+**聚合安装和经过验证的版本，不合并上游源码。** 五个上游扩展继续在各自仓库开发和发布；本仓库只维护依赖、独立入口、两个自有模块及组合测试。
 
 ## 包含什么
 
@@ -12,15 +12,16 @@
 | Session Titler | [pi-session-titler](https://github.com/M1racleShih/pi-session-titler) | `--title-*` / `PI_TITLE_*` |
 | HUD | [pi-hud](https://github.com/M1racleShih/pi-hud) | `/hud`；沿用 HUD 配置 |
 | Block Editor | [pi-block-editor](https://github.com/M1racleShih/pi-block-editor) | `/block-editor`；含新会话欢迎页 |
+| GPT Subagent Policy | [pi-gpt-subagent-policy](https://github.com/M1racleShih/pi-gpt-subagent-policy) | 仅对匹配的 GPT 主模型贡献独立提示段 |
 | Clear | 本仓库 `extensions/clear.ts` | `/clear`：新建会话，保留模型和思考等级 |
 | Model Overrides | 本仓库 `extensions/model-overrides.ts` | **默认关闭**；从当前 agent 目录读取个人模型配置 |
 
 版本与来源见 [`upstreams.json`](upstreams.json)，完整安装锁见 `package-lock.json`。
-前三项自研 UI 包中的 HUD、Block Editor、Picker 使用公开 GitHub 的完整 commit 归档 URL；Titler 使用精确 npm 版本。**npm 上同名 `pi-hud` 并非这里的 HUD，不要替换成裸 npm 包名。**
+HUD、Block Editor、Picker 和 GPT Policy 使用自有公开 GitHub 仓库的完整 commit 归档 URL；Titler 使用精确 npm 版本。**npm 上同名 `pi-hud` 并非这里的 HUD，不要替换成裸 npm 包名。**
 
 ## 安装
 
-需要 Node.js 22.19+。本版本以 Pi 1.5.0 验证，通过 GitHub 分发，暂不发布 npm。
+需要 **Node.js 24+**（自 0.2.0 起，与 GPT Policy 的要求一致）。本版本以 Pi 1.5.0 验证，通过 GitHub 分发，暂不发布 npm。
 
 ```sh
 pi install git:github.com/M1racleShih/pi-my-workbench
@@ -32,13 +33,13 @@ pi install git:github.com/M1racleShih/pi-my-workbench
 pi install 'git:github.com/M1racleShih/pi-my-workbench@<full-commit>'
 ```
 
-不要同时加载套件和对应的四个独立扩展、旧 `clear.ts` 或旧模型覆盖脚本。已有安装请先看 [迁移与回退](docs/MIGRATION.md)。安装和升级不会接管已有交互会话；完成后自行 `/reload` 或重启 Pi。
+不要同时加载套件和对应的五个独立上游扩展、旧 `clear.ts` 或旧模型覆盖脚本。已有安装请先看 [迁移与回退](docs/MIGRATION.md)。安装和升级不会接管已有交互会话；完成后自行 `/reload` 或重启 Pi。
 
 ## 启动界面只显示一项
 
 新会话首页的折叠 Extensions 摘要将套件显示为 **一个 `pi-my-workbench`**。
-Ctrl+O 展开后仍保留六个模块的原生资源路径，加载错误和警告不隐藏。
-这只是 Block Editor 欢迎页的展示分组：其他扩展照常显示，六个模块仍独立加载、单独开关。
+Ctrl+O 展开后仍保留七个模块的原生资源路径，加载错误和警告不隐藏。
+这只是 Block Editor 欢迎页的展示分组：其他扩展照常显示，七个模块仍独立加载、单独开关。
 关闭欢迎页、恢复非空会话、`/config` 等场景仍遵守 Pi/Block Editor 原有行为，不修改宿主安装文件。
 
 ## 单独关闭一个模块
@@ -56,10 +57,22 @@ Pi 支持过滤包内资源，例如不加载 HUD：
 }
 ```
 
-Picker、Titler、HUD 的资源入口位于 `node_modules/<package>/...`。Block Editor 使用
+Picker、Titler、HUD、GPT Policy 的资源入口位于 `node_modules/<package>/...`。Block Editor 使用
 `extensions/block-editor.ts` 这个单模块适配入口声明摘要分组；关闭它可过滤
 `!extensions/block-editor.ts`。Clear 和 Model Overrides 也位于 `extensions/`。
-可以使用 `pi config` 管理这六个资源，启动摘要合并不会合并开关。
+可以使用 `pi config` 管理这七个资源，启动摘要合并不会合并开关。
+
+## GPT 子智能体策略
+
+默认沿用上游的 `*/gpt-*` 匹配规则：根据当前协调会话的 **provider/modelId** 判断是否贡献
+独立的 `gpt_subagent_policy` 系统提示段；非 GPT 不注入，并清理该模块拥有的旧标签。
+这只是提示指导，不是模型路由、工具参数强制校验或自动派工，也不增加工具、命令或账户请求。
+完整策略继续在上游仓库维护，不在此复制。
+
+原有 `<agentDir>/pi-gpt-subagent-policy.json`（通常在 `~/.pi/agent/`）继续生效，每次 run 前重读；
+个人配置不进入套件。可用 `{ "enabled": false }` 关闭，或单独过滤
+`!node_modules/pi-gpt-subagent-policy/**`。从独立安装迁移时必须移除旧来源，避免双重加载。
+参见 [上游配置与边界](https://github.com/M1racleShih/pi-gpt-subagent-policy#configuration)。
 
 ## 模型覆盖：默认不做任何事
 
@@ -95,9 +108,11 @@ pi install "$PWD"
 
 ```sh
 npm run dev -- use hud /path/to/pi-hud
+npm run dev -- use policy /path/to/pi-gpt-subagent-policy
 npm run dev -- status
 # 恢复套件固定版本
 npm run dev -- reset hud
+npm run dev -- reset policy
 ```
 
 链接仅修改本 checkout 的 `node_modules` 和被忽略的 `.workbench/`，不会修改上游工作树。**更新依赖前先 reset 所有链接；发布检查拒绝活动开发链接。** 不在 Pi 管理的 Git 缓存中做开发覆盖，Pi 更新会清理该目录。
@@ -116,7 +131,7 @@ python3 scripts/startup-smoke.py --mode regular
 - 各上游原有配置文件、命令、环境变量和会话状态保持独立，不强行改成一份新配置。
 - HUD 的额度查询、Titler 的自动标题保留原有开关。合包并不消除它们可能产生的网络或模型请求。
 - 与 `pi-cc-extensions` 同用时，仍需为 footer、editor、欢迎页、`/clear`、`/context` 和补全分配所有权；套件不会重写其他插件配置。
-- Subagents、Herdr、REA 和其他第三方扩展不在本套件范围内。
+- `pi-subagents` 执行器、Herdr、REA 和其他第三方扩展仍不在本套件范围内；GPT Policy 只是条件提示规则，不负责派工。
 - 测试使用隔离 agent 目录和真实 Pi 资源 loader，不向模型发送提示，不查询账户额度，不启动外部服务。
 
 ## License

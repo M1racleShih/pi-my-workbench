@@ -8,7 +8,9 @@
 
 1. 备份目标 agent 目录的 settings、旧 `clear.ts`、旧模型注册扩展和相关非公开配置。原仓库有未提交改动时，记录 HEAD、工作树状态和文件哈希；不要 reset 或强制同步。
 2. 安装套件。保留本地开发功能时，使用自己的开发 clone，并按 [开发覆盖](DEVELOPMENT.md) 建立链接。
-3. 将 settings 中 Picker、Titler、HUD、Block Editor 四项来源替换为一项套件来源。保留其他包、默认模型、快捷键、压缩和 UI 配置；不要整份覆盖 settings。
+3. 将 settings 中已独立安装的 Picker、Titler、HUD、Block Editor、GPT Policy 来源收归一项套件来源。
+   0.2.0 新增 GPT Policy；若之前单独安装过它，必须移除旧来源，避免策略双重加载。保留其他包、
+   默认模型、快捷键、压缩和 UI 配置，不要整份覆盖 settings；其个人 JSON 配置无需搬动。
 4. 将旧全局 `clear.ts`、`remove-selected-models.ts` 移到备份位置或改为不自动加载的扩展名。不要只保留一份副本却仍让旧 `.ts` 入口自动发现。
 5. 如果以前使用模型覆盖脚本，将它的模型定义按原样迁移到当前 agent 目录的 `pi-my-workbench-models.json`，再显式 `enabled: true`。内置模型使用 `{ "builtin": "provider/model-id" }` 引用；其他定义保留端点、窗口、价格和 compat 等字段。使用真实 Pi loader 比较新旧注册结果，不靠模型名称猜测等价。
 6. 验证套件入口只加载一次、模型注册结果一致、原配置和工作树未被改写。loader 检查不运行 session_start，不能冒充完整 UI 或真实上游验证。
@@ -18,7 +20,8 @@
 
 ## 回退
 
-- 从备份记录中取回原来的四项包来源，移除套件来源；只调整这些项，不整体覆盖历史 settings。
+- 从备份记录中取回当时的独立包来源，移除套件来源；只调整目标项，不整体覆盖历史 settings。
+  回退 0.2.0 的接入时，可恢复原 GPT Policy 来源并将套件退回上一提交，避免新旧来源同时启用。
 - 恢复两个旧全局脚本入口，确保套件对应入口已停用，避免双重注册。
 - 个人模型 JSON 可以保留为不活动配置，不必删除；旧脚本恢复前先核对近期模型变更。
 - 本地开发原仓库没有被修改，仍可直接加载。reload / 重启后重新检查界面和模型。

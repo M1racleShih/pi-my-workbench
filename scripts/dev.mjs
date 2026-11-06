@@ -21,7 +21,7 @@ export function development(workspace = root) {
   };
   const identify = (alias) => {
     const entry = Object.entries(upstreams).find(([name, spec]) => alias === name || alias === spec.alias);
-    if (!entry) throw new Error("Unknown module; use hud, editor, picker or titler");
+    if (!entry) throw new Error(`Unknown module; use ${Object.values(upstreams).map((spec) => spec.alias).join(", ")}`);
     const [name, spec] = entry;
     const dependency = join(workspace, "node_modules", name);
     const backup = join(local, "pinned", name);

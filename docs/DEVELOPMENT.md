@@ -13,10 +13,11 @@ npm ci --ignore-scripts --legacy-peer-deps
 npm run dev -- use hud /path/to/pi-hud
 npm run dev -- use editor /path/to/pi-block-editor
 npm run dev -- use picker /path/to/pi-provider-model-picker
+npm run dev -- use policy /path/to/pi-gpt-subagent-policy
 npm run dev -- status
 ```
 
-可用别名：`hud`、`editor`、`picker`、`titler`，也可使用完整包名。源目录必须在套件 checkout 之外，其 package name 和入口必须匹配。
+可用别名：`hud`、`editor`、`picker`、`titler`、`policy`，也可使用完整包名。源目录必须在套件 checkout 之外，其 package name 和入口必须匹配。
 
 工具将套件中已安装的固定依赖移到 `.workbench/pinned/`，再创建指向原工作树的依赖链接；路径记录在 `.workbench/overrides.json`。这两个位置都不进 Git 或发布白名单。**工具不会修改、reset、提交或发布原工作树。** 同一个 Pi 入口会加载被链接的真实源码，因此未提交功能可以继续使用。
 
@@ -26,6 +27,7 @@ npm run dev -- status
 npm run dev -- reset hud
 npm run dev -- reset editor
 npm run dev -- reset picker
+npm run dev -- reset policy
 npm run dev -- status
 ```
 
@@ -39,14 +41,16 @@ npm run dev -- status
 
 ## 测试覆盖范围
 
-使用 Node 内置 test runner 和 Pi 1.5.0 的真实 DefaultResourceLoader：独立资源发现、命令/flag 数量、资源过滤、重复 reload、headless 生命周期、模型覆盖的默认关闭和错误边界，以及 `/clear` 的跨工厂恢复。开发链接测试使用临时伪包，检查往返恢复与上游不变。
+使用 Node 内置 test runner 和 Pi 1.5.0 的真实 DefaultResourceLoader：独立资源发现、命令/flag 数量、资源过滤、重复 reload、headless 生命周期、模型覆盖的默认关闭和错误边界，以及 `/clear` 的跨工厂恢复。开发链接测试使用临时伪包，检查往返恢复与上游不变。GPT Policy 测试经真实 loader 取得
+上游 hook，直接验证 GPT/非 GPT 切换、个人配置实时变化、无效配置 fail-closed 和强制提示清理；
+不启动 agent turn，也不调用真实模型。
 
 测试不运行 agent turn，不发送 prompt，不查询额度或启动外部服务。原扩展的单元测试仍在各自仓库维护；这里验证组合与套件自有逻辑。
 
 ### 实际启动展示
 
 `python3 scripts/startup-smoke.py --mode regular` 与 `--mode fullscreen` 使用独立 tmux server、
-隔离 HOME/agent、假模型与 offline，检查首页只出现一项套件、Ctrl+O 六个路径、折回、reload
+隔离 HOME/agent、假模型与 offline，检查首页只出现一项套件、Ctrl+O 七个路径、折回、reload
 和 36 列窄屏。可用 `--source 'git:github.com/M1racleShih/pi-my-workbench@<commit>'` 验证
 公开安装源；安装仍只写临时 agent 目录。捕获在 `.workbench/startup-smoke-<mode>/`，不进 Git。
 
