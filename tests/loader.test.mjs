@@ -57,6 +57,15 @@ test("native package filtering can disable a single upstream module", async (t) 
   assert.ok(commands(result).includes("block-editor"));
 });
 
+test("the editor adapter remains an independently filterable resource", async (t) => {
+  const { result } = await load(t, { packages: [{ source: root, extensions: ["!extensions/block-editor.ts"] }] });
+  assertClean(result);
+  assert.equal(result.extensions.length, 5);
+  assert.ok(!commands(result).includes("block-editor"));
+  assert.ok(commands(result).includes("hud"));
+  assert.ok(commands(result).includes("clear"));
+});
+
 test("reload does not multiply commands or hooks", async (t) => {
   const { result, loader } = await load(t);
   assertClean(result);
@@ -127,6 +136,44 @@ test("clear preserves model and thinking across a replacement factory", async (t
   assert.equal(restoredModel, originalModel);
   assert.equal(restoredThinking, "high");
   assert.equal(notices.length, 1);
+});
+
+for (const source of ["local", "git"]) test(`workbench ${source} startup is one summary with six native detail paths`, async (t) => {
+  const { result, cwd } = await load(t);
+  assertClean(result);
+  const entries = manifest.pi.extensions.map((path) => path.replace(/^\.\//, ""));
+  const labels = source === "git" ? entries.map((path) => `M1racleShih/pi-my-workbench:${path}`)
+    : ["extensions", "auto-session-name.ts", "pi-hud", "block-editor.ts", "clear.ts", "model-overrides.ts"];
+  const paths = entries.map((path) => source === "git" ? path : `${root}/${path.replace(/\/index\.ts$/, "")}`);
+  const expanded = source === "git" ? `[Extensions]\n  user\n    git:github.com/M1racleShih/pi-my-workbench@main\n${paths.map((path) => `      ${path}`).join("\n")}`
+    : `[Extensions]\n  user\n${paths.map((path) => `    ${path}`).join("\n")}`;
+  const section = {
+    state: { expanded: false },
+    build() { return this.state.expanded ? expanded : `[Extensions]\n  ${labels.join(", ")}`; },
+    render() { return this.build().split("\n"); },
+    invalidate() {},
+    setExpanded(value) { this.state.expanded = value; },
+  };
+  const original = section.render;
+  const tui = { children: [section], terminal: { rows: 60 }, requestRender() {} };
+  let header, editor;
+  const ctx = { mode: "tui", hasUI: true, cwd, sessionManager: { getBranch: () => [] }, getSystemPrompt: () => "test",
+    ui: { theme: { fg: (_color, text) => text, bold: (text) => text }, notify() {}, getToolsExpanded: () => false,
+      getEditorComponent: () => editor, setEditorComponent: (factory) => { editor = factory; },
+      setHeader: (factory) => { header = factory(tui); } } };
+  const extension = result.extensions.find((e) => e.commands.has("block-editor"));
+  for (const handler of extension.handlers.get("session_start")) await handler({ reason: "startup" }, ctx);
+  header.render(120);
+  const collapsed = section.render(120).join("\n");
+  assert.ok(collapsed.includes("Extensions · 1"), collapsed);
+  assert.equal(collapsed.match(/pi-my-workbench/g)?.length, 1);
+  assert.ok(!collapsed.includes("clear.ts"));
+  section.setExpanded(true);
+  assert.equal(section.render(200).join("\n"), expanded);
+  section.setExpanded(false);
+  assert.ok(section.render(120).join("\n").includes("Extensions · 1"));
+  for (const handler of extension.handlers.get("session_shutdown")) await handler({ reason: "quit" }, ctx);
+  assert.equal(section.render, original);
 });
 
 test("manifest intentionally has no global default model changes or extra resource types", () => {

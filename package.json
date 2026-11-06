@@ -1,6 +1,6 @@
 {
   "name": "pi-my-workbench",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "A pinned, modular personal Pi workbench; upstream extensions stay in their own repositories.",
   "type": "module",
@@ -11,15 +11,31 @@
     "url": "git+https://github.com/M1racleShih/pi-my-workbench.git"
   },
   "homepage": "https://github.com/M1racleShih/pi-my-workbench#readme",
-  "engines": { "node": ">=22.19.0" },
-  "keywords": ["pi-package", "pi-extension", "workbench"],
-  "files": ["extensions/", "lib/", "scripts/", "docs/", "examples/", "upstreams.json", "README.md", "CHANGELOG.md", "LICENSE"],
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "workbench"
+  ],
+  "files": [
+    "extensions/",
+    "lib/",
+    "scripts/",
+    "docs/",
+    "examples/",
+    "upstreams.json",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
   "pi": {
     "extensions": [
       "./node_modules/pi-provider-model-picker/extensions/index.ts",
       "./node_modules/pi-session-titler/extensions/auto-session-name.ts",
       "./node_modules/pi-hud/index.ts",
-      "./node_modules/pi-block-editor/index.ts",
+      "./extensions/block-editor.ts",
       "./extensions/clear.ts",
       "./extensions/model-overrides.ts"
     ],
@@ -29,17 +45,24 @@
   },
   "dependencies": {
     "pi-hud": "https://codeload.github.com/M1racleShih/pi-hud/tar.gz/4f48d4e0d6e97e17679bc6c20222c3dfa751fe2a",
-    "pi-block-editor": "https://codeload.github.com/M1racleShih/pi-block-editor/tar.gz/bb42e1ff1f55db0c1bf080fe5631a16ca10648c5",
+    "pi-block-editor": "https://codeload.github.com/M1racleShih/pi-block-editor/tar.gz/6233aac03e584d702f2f011da6d5439fe4086006",
     "pi-provider-model-picker": "https://codeload.github.com/M1racleShih/pi-provider-model-picker/tar.gz/94e218dd6a14cf43fab0e4fde0e9c9908412cb16",
     "pi-session-titler": "0.1.0"
   },
-  "bundledDependencies": ["pi-hud", "pi-block-editor", "pi-provider-model-picker", "pi-session-titler"],
+  "bundledDependencies": [
+    "pi-hud",
+    "pi-block-editor",
+    "pi-provider-model-picker",
+    "pi-session-titler"
+  ],
   "peerDependencies": {
     "@earendil-works/pi-ai": "*",
     "@earendil-works/pi-coding-agent": "*",
     "@earendil-works/pi-tui": "*"
   },
-  "devDependencies": { "@earendil-works/pi-coding-agent": "1.5.0" },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "1.5.0"
+  },
   "scripts": {
     "test": "node --test --test-concurrency=1 tests/*.test.mjs",
     "check": "node scripts/release-check.mjs",

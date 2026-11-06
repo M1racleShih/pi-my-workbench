@@ -42,3 +42,14 @@ npm run dev -- status
 使用 Node 内置 test runner 和 Pi 1.5.0 的真实 DefaultResourceLoader：独立资源发现、命令/flag 数量、资源过滤、重复 reload、headless 生命周期、模型覆盖的默认关闭和错误边界，以及 `/clear` 的跨工厂恢复。开发链接测试使用临时伪包，检查往返恢复与上游不变。
 
 测试不运行 agent turn，不发送 prompt，不查询额度或启动外部服务。原扩展的单元测试仍在各自仓库维护；这里验证组合与套件自有逻辑。
+
+### 实际启动展示
+
+`python3 scripts/startup-smoke.py --mode regular` 与 `--mode fullscreen` 使用独立 tmux server、
+隔离 HOME/agent、假模型与 offline，检查首页只出现一项套件、Ctrl+O 六个路径、折回、reload
+和 36 列窄屏。可用 `--source 'git:github.com/M1racleShih/pi-my-workbench@<commit>'` 验证
+公开安装源；安装仍只写临时 agent 目录。捕获在 `.workbench/startup-smoke-<mode>/`，不进 Git。
+
+Block Editor 资源有一个属于套件的单模块适配入口，**不是**把多个工厂合并成一个。
+`upstreams.json` 的 `entry` 仍指上游真实入口，供开发链接校验；可选 `resource` 指套件公开给 Pi
+的适配入口。其他模块继续直接暴露依赖中的独立资源。

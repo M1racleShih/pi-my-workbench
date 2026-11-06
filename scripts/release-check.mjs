@@ -28,7 +28,7 @@ export function checkRelease(root = resolve(dirname(fileURLToPath(import.meta.ur
     assert.equal(installed.name, name);
     assert.equal(installed.version, spec.version, `Version mismatch for ${name}`);
     assert.ok(existsSync(join(dependency, spec.entry)), `Missing upstream entry for ${name}`);
-    assert.ok(manifest.pi.extensions.includes(`./node_modules/${name}/${spec.entry}`));
+    assert.ok(manifest.pi.extensions.includes(`./${spec.resource ?? `node_modules/${name}/${spec.entry}`}`));
   }
   for (const entry of manifest.pi.extensions) assert.ok(existsSync(join(root, entry)), `Missing extension entry: ${entry}`);
   assert.ok(!Object.keys(manifest.dependencies).some((name) => name.startsWith("@earendil-works/") || name === "typebox"));

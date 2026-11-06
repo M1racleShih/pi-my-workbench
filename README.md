@@ -34,6 +34,13 @@ pi install 'git:github.com/M1racleShih/pi-my-workbench@<full-commit>'
 
 不要同时加载套件和对应的四个独立扩展、旧 `clear.ts` 或旧模型覆盖脚本。已有安装请先看 [迁移与回退](docs/MIGRATION.md)。安装和升级不会接管已有交互会话；完成后自行 `/reload` 或重启 Pi。
 
+## 启动界面只显示一项
+
+新会话首页的折叠 Extensions 摘要将套件显示为 **一个 `pi-my-workbench`**。
+Ctrl+O 展开后仍保留六个模块的原生资源路径，加载错误和警告不隐藏。
+这只是 Block Editor 欢迎页的展示分组：其他扩展照常显示，六个模块仍独立加载、单独开关。
+关闭欢迎页、恢复非空会话、`/config` 等场景仍遵守 Pi/Block Editor 原有行为，不修改宿主安装文件。
+
 ## 单独关闭一个模块
 
 Pi 支持过滤包内资源，例如不加载 HUD：
@@ -49,7 +56,10 @@ Pi 支持过滤包内资源，例如不加载 HUD：
 }
 ```
 
-其他依赖入口也位于 `node_modules/<package>/...`；自有模块位于 `extensions/`。可以使用 `pi config` 管理资源。
+Picker、Titler、HUD 的资源入口位于 `node_modules/<package>/...`。Block Editor 使用
+`extensions/block-editor.ts` 这个单模块适配入口声明摘要分组；关闭它可过滤
+`!extensions/block-editor.ts`。Clear 和 Model Overrides 也位于 `extensions/`。
+可以使用 `pi config` 管理这六个资源，启动摘要合并不会合并开关。
 
 ## 模型覆盖：默认不做任何事
 
@@ -91,6 +101,13 @@ npm run dev -- reset hud
 ```
 
 链接仅修改本 checkout 的 `node_modules` 和被忽略的 `.workbench/`，不会修改上游工作树。**更新依赖前先 reset 所有链接；发布检查拒绝活动开发链接。** 不在 Pi 管理的 Git 缓存中做开发覆盖，Pi 更新会清理该目录。
+
+真实启动展示验证（需要本机 Pi、tmux；只创建自己的临时终端，不发送模型提示）：
+
+```sh
+python3 scripts/startup-smoke.py --mode fullscreen
+python3 scripts/startup-smoke.py --mode regular
+```
 
 详见 [本地开发](docs/DEVELOPMENT.md) · [更新流程](docs/UPDATING.md)。
 

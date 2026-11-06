@@ -21,9 +21,10 @@
   },
   "pi-block-editor": {
     "repository": "https://github.com/M1racleShih/pi-block-editor",
-    "version": "0.1.0",
-    "commit": "bb42e1ff1f55db0c1bf080fe5631a16ca10648c5",
+    "version": "0.1.1",
+    "commit": "6233aac03e584d702f2f011da6d5439fe4086006",
     "entry": "index.ts",
+    "resource": "extensions/block-editor.ts",
     "alias": "editor"
   }
 }
